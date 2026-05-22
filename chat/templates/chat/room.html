@@ -1,0 +1,105 @@
+{% extends 'chat/base.html' %}
+{% block title %}
+{{ room }}
+{% endblock %}
+{% block content %}
+<div class="flex h-full md:h-1/2 rounded-lg w-full overflow-hidden bg-teal-100 text-slate-800 antialiased dark:text-slate-100">
+
+  <!-- Main Chat Window -->
+  <main class="flex flex-1 flex-col bg-teal-700">
+    <!-- Chat Header -->
+    <header class="flex h-16 items-center justify-between border-b border-slate-200 bg-teal-900 px-6 z-10 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="relative h-10 w-10">
+          <img class="h-full w-full rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="Sarah" />
+          <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500 dark:border-slate-950"></span>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold leading-tight">{{ room }}</h2>
+          <p class="text-xs text-green-500 font-medium">Active now</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Message Area -->
+    <div id="msg-area" class="flex-1 overflow-y-auto p-6 space-y-4">
+      
+      <!-- Received Message -->
+      <div id="received-msg" class="flex items-end gap-3 max-w-lg">
+        <img class="h-8 w-8 rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="Sarah" />
+        <div class="flex flex-col gap-1">
+          <div class="rounded-2xl text-black rounded-bl-none bg-white px-4 py-2.5 shadow-sm border border-slate-100 ">
+            <p class="text-sm">Hey! Did you manage to check out the design updates I sent over yesterday morning?</p>
+          </div>
+          <span class="text-[10px] pl-1 text-slate-400">14:28</span>
+        </div>
+      </div>
+
+      <!-- Sent Message -->
+
+    </div>
+
+    <!-- Chat Input Footer -->
+    <footer class="border-t border-slate-200 bg-teal-900 p-4 shadow-md">
+      <form class="flex items-center gap-3" onsubmit="event.preventDefault()">
+
+        <!-- Main text input -->
+        <div class="relative flex-1">
+          <input id="chat-input" type="text" placeholder="Type a message..." class="w-full rounded-full border border-teal-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm placeholder-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 bg-slate-900" />
+          <!-- Emoji Picker button wrapper -->
+        </div>
+
+        <!-- Send Button -->
+        <button id="chat-submit" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-teal-600 text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-4 w-4 ml-0.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+        </button>
+      </form>
+    </footer>
+  </main>
+{{ room|json_script:"room-name" }}
+</div>
+
+{% endblock %}
+
+
+{% block script %}
+<script>
+  const roomName = JSON.parse(document.getElementById('room-name').textContent);
+  const chatSocket = new WebSocket('ws://'+ window.location.host + '/ws/chat/' + roomName + '/');
+  const inputField = document.getElementById('chat-input');
+  const chatSubmit = document.getElementById('chat-submit');
+  
+  chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data)
+    const msgArea = document.getElementById('msg-area')
+    const msgDiv = document.createElement('div');
+    msgDiv.clasList = "flex items-end gap-3 max-w-lg";
+    msgDiv.innerHTML = `<div class="flex flex-col gap-1 items-end">
+          <div class="rounded-2xl rounded-br-none bg-blue-600 px-4 py-2.5 text-white shadow-sm shadow-blue-500/10">
+            <p class="text-sm">${data.message}</p>
+          </div>
+          <span class="text-[10px] pr-1 text-slate-400">14:30</span>
+        </div>`
+    msgArea += msgDiv;
+    console.log(data)
+  }
+  
+  chatSocket.onclose = function(e) {
+    console.error('Chat socket closed unexpectedly');
+  };
+  
+  inputField.onkeyup = function(e){
+    if (e.key === 'Enter'){
+      chatSubmit.click()
+    }
+  }
+  
+  chatSubmit.onclick = function(e){
+    const message = inputField.value;
+    chatSocket.send(JSON.stringify({
+      'message': message
+    }))
+    inputField.value = ""
+  }
+</script>
+{% endblock %}
