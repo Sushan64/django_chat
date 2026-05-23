@@ -1,6 +1,6 @@
 {% extends 'chat/base.html' %}
 {% block title %}
-{{ room }}
+{{ other_user.username }}
 {% endblock %}
 {% block content %}
 <div class="flex h-full md:h-1/2 rounded-lg w-full overflow-hidden bg-teal-100 text-slate-800 antialiased dark:text-slate-100">
@@ -15,7 +15,7 @@
           <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500 dark:border-slate-950"></span>
         </div>
         <div>
-          <h2 class="text-sm font-semibold leading-tight">{{ room }}</h2>
+          <h2 class="text-sm font-semibold leading-tight">{{ other_user.username }}</h2>
           <p class="text-xs text-green-500 font-medium">Active now</p>
         </div>
       </div>
@@ -24,18 +24,29 @@
     <!-- Message Area -->
     <div id="msg-area" class="flex-1 overflow-y-auto p-6 space-y-4">
       
-      <!-- Received Message -->
-      <div id="received-msg" class="flex items-end gap-3 max-w-lg">
-        <img class="h-8 w-8 rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="Sarah" />
-        <div class="flex flex-col gap-1">
-          <div class="rounded-2xl text-black rounded-bl-none bg-white px-4 py-2.5 shadow-sm border border-slate-100 ">
-            <p class="text-sm">Hey! Did you manage to check out the design updates I sent over yesterday morning?</p>
+      {% for message in messages %}
+        {% if message.sender == request.user %}
+        <div>
+          <div class="flex flex-col gap-1 items-end">
+            <div class="rounded-2xl rounded-br-none bg-blue-600 px-4 py-2.5 text-white shadow-sm shadow-blue-500/10">
+              <p class="text-sm">{{ message.message }}</p>
+            </div>
+            <span class="text-[10px] pr-1 text-slate-400">{{ message.timestamp }}</span>
           </div>
-          <span class="text-[10px] pl-1 text-slate-400">14:28</span>
         </div>
-      </div>
-
-      <!-- Sent Message -->
+        {% else %}
+        <div class="flex items-end gap-3 max-w-lg">
+          <img class="h-8 w-8 rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="Sarah" />
+          <div class="flex flex-col gap-1 items-start">
+            <div class="rounded-2xl text-black rounded-bl-none bg-white px-4 py-2.5 shadow-sm border border-slate-100 ">
+              <p class="text-sm">{{ message.message }}</p>
+            </div>
+            <span class="text-[10px] pl-1 text-slate-400">{{ message.timestamp }}</span>
+          </div>
+        </div>
+        
+        {% endif %}
+      {% endfor %}
 
     </div>
 
@@ -56,7 +67,8 @@
       </form>
     </footer>
   </main>
-{{ room|json_script:"room-name" }}
+{{ other_user.id|json_script:"other-user-id" }}
+{{ request.user.id|json_script:"sender-id" }}
 </div>
 
 {% endblock %}
@@ -64,24 +76,45 @@
 
 {% block script %}
 <script>
-  const roomName = JSON.parse(document.getElementById('room-name').textContent);
-  const chatSocket = new WebSocket('ws://'+ window.location.host + '/ws/chat/' + roomName + '/');
+  const otherUserId = JSON.parse(document.getElementById('other-user-id').textContent);
+  const senderId = JSON.parse(document.getElementById('sender-id').textContent);
+  const chatSocket = new WebSocket('ws://'+ window.location.host + '/ws/chat/' + otherUserId + '/');
   const inputField = document.getElementById('chat-input');
   const chatSubmit = document.getElementById('chat-submit');
+  const msgArea = document.getElementById('msg-area')
+
+  function scrollToButtom(){
+    msgArea.scrollTop = msgArea.scrollHeight;
+  }
+  scrollToButtom()
   
   chatSocket.onmessage = function(e) {
     const data = JSON.parse(e.data)
-    const msgArea = document.getElementById('msg-area')
-    const msgDiv = document.createElement('div');
-    msgDiv.clasList = "flex items-end gap-3 max-w-lg";
-    msgDiv.innerHTML = `<div class="flex flex-col gap-1 items-end">
-          <div class="rounded-2xl rounded-br-none bg-blue-600 px-4 py-2.5 text-white shadow-sm shadow-blue-500/10">
-            <p class="text-sm">${data.message}</p>
-          </div>
-          <span class="text-[10px] pr-1 text-slate-400">14:30</span>
-        </div>`
-    msgArea += msgDiv;
-    console.log(data)
+    if (data.sender_id == senderId){
+      const senderDiv = document.createElement('div');
+      //senderDiv.classList = "flex gap-3 max-w-lg";
+      senderDiv.innerHTML = `<div class="flex flex-col gap-1 items-end">
+            <div class="rounded-2xl rounded-br-none bg-blue-600 px-4 py-2.5 text-white shadow-sm shadow-blue-500/10">
+              <p class="text-sm msg-target"></p>
+            </div>
+            <span class="text-[10px] pr-1 text-slate-400">${data.timestamp}</span>
+          </div>`
+      senderDiv.querySelector('.msg-target').innerText = data.message
+      msgArea.appendChild(senderDiv);
+    } else{
+      const receiverDiv = document.createElement('div');
+      receiverDiv.classList = "flex items-end gap-3 max-w-lg";
+      receiverDiv.innerHTML = `<img class="h-8 w-8 rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="Sarah" />
+          <div class="flex flex-col items-start gap-1">
+            <div class="rounded-2xl text-black rounded-bl-none bg-white px-4 py-2.5 shadow-sm border border-slate-100 ">
+              <p class="text-sm msg-target"></p>
+            </div>
+            <span class="text-[10px] pl-1 text-slate-400">${data.timestamp}</span>
+          </div>`
+      receiverDiv.querySelector('.msg-target').innerText = data.message
+      msgArea.appendChild(receiverDiv);
+    }
+    scrollToButtom()
   }
   
   chatSocket.onclose = function(e) {
@@ -89,16 +122,18 @@
   };
   
   inputField.onkeyup = function(e){
-    if (e.key === 'Enter'){
+    if (e.key === 'Enter' && inputField.value != ""){
       chatSubmit.click()
     }
   }
   
   chatSubmit.onclick = function(e){
     const message = inputField.value;
-    chatSocket.send(JSON.stringify({
-      'message': message
-    }))
+    if (message.trim() != ""){
+      chatSocket.send(JSON.stringify({
+        'message': message,
+      }))
+    }
     inputField.value = ""
   }
 </script>

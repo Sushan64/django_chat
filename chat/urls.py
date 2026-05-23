@@ -6,5 +6,5 @@ urlpatterns = [
     path('signup', views.signup, name="signup"),
     path('signin', views.signin, name="signin"),
     path('signout', views.signout, name="logout"),
-    path('room/<slug:room_name>', views.room, name="room"),
+    path('room/<int:other_user_id>', views.room, name="room"),
   ]
