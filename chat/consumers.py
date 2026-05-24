@@ -1,10 +1,11 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from chat.models import ChatMessage
+from chat.models import ChatMessage, Friendship
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.defaultfilters import date as django_date
+from django.db.models import Q
 
 class ChatConsumer(AsyncWebsocketConsumer):
   async def connect(self):
@@ -15,6 +16,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     self.other_user_id = self.scope['url_route']['kwargs']['other_user_id']
     users_id = sorted([int(self.user.id), int(self.other_user_id)])
+    
+    is_friend = await self.check_freindship(users_id[0], users_id[1])
+    
+    if not is_friend:
+      await self.close()
+      return
     
     self.room_name = f'chat_{users_id[0]}_{users_id[1]}'
     self.room_group_name = f"group_{self.room_name}"
@@ -70,3 +77,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
       receiver=receiver,
       message=str(msg),
     )
+  @database_sync_to_async
+  def check_freindship(self, sender_id, receiver_id):
+    return Friendship.objects.filter(
+      Q(sender_id=sender_id, receiver_id=receiver_id) |
+      Q(sender_id=receiver_id, receiver_id=sender_id),
+      relation="active"
+      ).exists()

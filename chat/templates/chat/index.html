@@ -6,10 +6,28 @@ Home
 {% block content %}
   <h1 class="text-white text-2xl font-bold text-center">Welcome to Django Chat!</h1>
   {% if request.user.is_authenticated %}
+  <p class="text-white text-center">{{ request.user.username }}</p>
+  <h1 class="text-2xl text-white mt-6">Your Friends!</h1>
   <ul class="text-white text-xl text-center mt-10 flex flex-col gap-4">
-     <li>Sonam</li>
-     <li>Ram</li>
-     <li>Hari</li>
+    {% for friend in friends %}
+     <li>{{ friend.username }}</li>
+    {% endfor %}
+  </ul>
+  <h1 class="text-2xl text-white mt-6">Pending Friends</h1>
+  <ul class="text-white text-xl text-center mt-10 flex flex-col gap-4">
+    {% for p_friend in pending_friends %}
+    {% if p_friend.sender == request.user %}
+    <li>{{ p_friend.receiver }}</li>
+    {% else %}
+    <li>{{ p_friend.sender }}</li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  <h1 class="text-2xl text-white mt-6">Add New friends</h1>
+  <ul class="text-white text-xl text-center mt-10 flex flex-col gap-4">
+    {% for a_user in available_users %}
+    <li>{{ a_user }}</li>
+    {% endfor %}
   </ul>
   {% endif %}
 {% endblock %}
