@@ -49,6 +49,8 @@ def index(request):
         friends.append(friend.sender)
   else:
     friends=[]
+    available_users=[]
+    pending_friends=[]
   return render(request, 'chat/index.html', {
     'friends': friends,
     'pending_friends': pending_friends,
