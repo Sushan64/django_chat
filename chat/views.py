@@ -6,20 +6,23 @@ from django.db.models import Q
 
 from . import models
 from .forms import SignupForm
+from .decorators import check_friendship
 
-
+"""
 def check_friendship(fun):
   def wrapper(req, other_user_id):
-    is_friend = models.Friendship.objects.filter(
-      Q(sender_id=req.user.id, receiver_id=other_user_id) |
-      Q(sender_id=other_user_id, receiver_id=req.user.id),
-      relation="active"
-    ).exists()
-    if not is_friend:
-      return redirect('/')
+    if other_user_id != 0:
+      is_friend = models.Friendship.objects.filter(
+        Q(sender_id=req.user.id, receiver_id=other_user_id) |
+        Q(sender_id=other_user_id, receiver_id=req.user.id),
+        relation="active"
+      ).exists()
+      if not is_friend:
+        return redirect('/')
     return fun(req, other_user_id)
   return wrapper
-  
+"""
+
 # Create your views here.
 def index(request):
   if request.user.is_authenticated:
@@ -57,12 +60,14 @@ def index(request):
     'available_users': available_users,
   })
   
+
+  
 def signup(request):
   if request.method == "POST":
     form = SignupForm(request.POST)
     if form.is_valid():
       form.save()
-      return redirect('/')
+      return redirect('/signin')
   else:
     form = SignupForm()
   
@@ -90,11 +95,20 @@ def signout(request):
 @login_required
 @check_friendship
 def room(request, other_user_id):
-  other_user = get_object_or_404(User, id=other_user_id)
-  messages = models.ChatMessage.objects.filter(
-    (Q(sender=request.user, receiver=other_user)) |
-    (Q(sender=other_user, receiver=request.user))
-    ).order_by('-timestamp')[:20]
+  if other_user_id != 0:
+    other_user = get_object_or_404(User, id=other_user_id)
+    # filter all the messages history as a sender or receiver
+    messages = models.ChatMessage.objects.filter(
+      (Q(sender=request.user, receiver=other_user)) |
+      (Q(sender=other_user, receiver=request.user))
+      ).order_by('-timestamp')[:20] # only last 20 messages to take
+  else:
+    ai_user = User.objects.get(username="AI_Assistant")
+    other_user ={'id':0, 'username': 'AI Assistant'}
+    messages = models.ChatMessage.objects.filter(
+      (Q(sender=request.user, receiver=ai_user)) |
+      (Q(sender=ai_user, receiver=request.user))
+      ).order_by('-timestamp')[:20]
     
   rev_messages = list(reversed(messages))
   return render(request, 'chat/room.html', {'other_user': other_user, "messages": rev_messages})

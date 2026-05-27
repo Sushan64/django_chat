@@ -90,6 +90,7 @@
   
   chatSocket.onmessage = function(e) {
     const data = JSON.parse(e.data)
+    
     if (data.sender_id == senderId){
       const senderDiv = document.createElement('div');
       //senderDiv.classList = "flex gap-3 max-w-lg";
