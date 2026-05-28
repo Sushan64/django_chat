@@ -3,25 +3,11 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import JsonResponse
 
 from . import models
 from .forms import SignupForm
 from .decorators import check_friendship
-
-"""
-def check_friendship(fun):
-  def wrapper(req, other_user_id):
-    if other_user_id != 0:
-      is_friend = models.Friendship.objects.filter(
-        Q(sender_id=req.user.id, receiver_id=other_user_id) |
-        Q(sender_id=other_user_id, receiver_id=req.user.id),
-        relation="active"
-      ).exists()
-      if not is_friend:
-        return redirect('/')
-    return fun(req, other_user_id)
-  return wrapper
-"""
 
 # Create your views here.
 def index(request):
@@ -34,7 +20,7 @@ def index(request):
     pending_friends = models.Friendship.objects.filter(
       Q(sender=request.user) | Q(receiver=request.user),
       relation="pending"
-      ).select_related('sender','receiver')
+      ).exclude(Q(sender__username="AI_Assistant") | Q(receiver__username="AI_Assistant")).select_related('sender','receiver')
     
     available_users = models.User.objects.exclude(
       friends_received__sender = request.user
@@ -42,7 +28,7 @@ def index(request):
         friends_sent__receiver = request.user
       ).exclude(
         id=request.user.id
-      )
+      ).exclude(username="AI_Assistant")
     
     friends = []
     for friend in active_friends:
@@ -60,7 +46,16 @@ def index(request):
     'available_users': available_users,
   })
   
-
+  
+def add_friend(request):
+  if request.method == "POST":
+    user_id = request.POST.get('user_id')
+    sender = User.objects.get(id=request.user.id)
+    receiver = User.objects.get(id=user_id)
+    friend, created = models.Friendship.objects.get_or_create(sender=sender, receiver=receiver)
+    if created:
+      return JsonResponse({'status': True, 'message': 'Friend request has been sent!'})
+    return JsonResponse({'status': False, 'message': 'Something went wrong!'})
   
 def signup(request):
   if request.method == "POST":

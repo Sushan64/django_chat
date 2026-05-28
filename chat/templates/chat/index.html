@@ -1,33 +1,137 @@
 {% extends 'chat/base.html' %}
-{% block title %}
-Home
-{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
-  <h1 class="text-white text-2xl font-bold text-center">Welcome to Django Chat!</h1>
+<div class="max-w-md mx-auto px-4 py-10 text-white">
+
   {% if request.user.is_authenticated %}
-  <p class="text-white text-center">{{ request.user.username }}</p>
-  <h1 class="text-2xl text-white mt-6">Your Friends!</h1>
-  <ul class="text-white text-xl text-center mt-10 flex flex-col gap-4">
-    {% for friend in friends %}
-     <li>{{ friend.username }}</li>
-    {% endfor %}
-  </ul>
-  <h1 class="text-2xl text-white mt-6">Pending Friends</h1>
-  <ul class="text-white text-xl text-center mt-10 flex flex-col gap-4">
-    {% for p_friend in pending_friends %}
-    {% if p_friend.sender == request.user %}
-    <li>{{ p_friend.receiver }}</li>
+
+  <h1 class="text-2xl font-bold mb-1">Welcome, {{ request.user.username }}</h1>
+  <hr class="border-white/20 mb-8">
+
+  <!-- Friends -->
+  <div class="mb-8">
+    <h2 class="text-xs uppercase tracking-widest text-white/50 mb-3">Friends ({{ friends|length }})</h2>
+    {% if friends %}
+      <ul class="flex flex-col gap-1">
+        {% for friend in friends %}
+          {% if friend.username != "AI_Assistant" %}
+          <li class="flex items-center justify-between py-2 border-b border-white/10">
+            <span class="text-white font-medium">{{ friend.username }}</span>
+            <a href="{% url 'room' friend.id %}" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
+              Message
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
     {% else %}
-    <li>{{ p_friend.sender }}</li>
+      <p class="text-white/30 text-sm">No friends yet.</p>
     {% endif %}
-    {% endfor %}
-  </ul>
-  <h1 class="text-2xl text-white mt-6">Add New friends</h1>
-  <ul class="text-white text-xl text-center mt-10 flex flex-col gap-4">
-    {% for a_user in available_users %}
-    <li>{{ a_user }}</li>
-    {% endfor %}
-  </ul>
+  </div>
+
+  <!-- Pending -->
+  <div class="mb-8">
+    <h2 class="text-xs uppercase tracking-widest text-white/50 mb-3">Pending (<span id="pending-length">{{ pending_friends|length }}</span>)</h2>
+      <ul id="pending-list" class="flex flex-col gap-1">
+      
+        {% for p_friend in pending_friends %}
+          {% if p_friend.sender.username != "AI_Assistant" and p_friend.receiver.username != "AI_Assistant" %}
+          <li class="flex items-center justify-between py-2 border-b border-white/10">
+            {% if p_friend.sender == request.user %}
+              <span class="text-white font-medium">{{ p_friend.receiver }}</span>
+              <span class="text-xs text-white/40">sent</span>
+            {% else %}
+              <span class="text-white font-medium">{{ p_friend.sender }}</span>
+              <span class="text-xs text-white/40">incoming</span>
+            {% endif %}
+          </li>
+          {% endif %}
+          {% endfor %}
+        {% if not pending_friends %}
+        <p class="text-white/30 text-sm">No pending requests.</p>
+        {% endif %}
+      </ul>
+  </div>
+
+  <!-- Available -->
+  <div class="mb-8">
+    <h2 class="text-xs uppercase tracking-widest text-white/50 mb-3">Add Friends (<span id="available-length">{{ available_users|length }}</span>)</h2>
+      <ul id="available-list" class="flex flex-col gap-1">
+        {% for a_user in available_users %}
+          {% if a_user.username != "AI_Assistant" %}
+          <li class="flex items-center justify-between py-2 border-b border-white/10">
+            <span class="text-white font-medium">{{ a_user }}</span>
+            <a onclick="sentFriendRequest(this)" data-id="{{ a_user.id }}" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
+            <span class="text-xs text-white/40">add</span>
+            </a>
+          </li>
+          {% endif %}
+        {% endfor %}
+        {% if not available_users %}
+          <p class="text-white/30 text-sm">No users to add.</p>
+        {% endif %}
+      </ul>
+  </div>
+
+  <!-- AI Assistant Floating Button -->
+  <a href="{% url 'room' 0 %}"
+     class="fixed bottom-6 right-6 flex items-center gap-2 bg-white text-black text-sm font-semibold px-4 py-3 rounded-full shadow-lg hover:bg-white/90 transition-colors">
+    <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+    AI Assistant
+  </a>
+
+  {% else %}
+  <div class="text-center mt-24">
+    <h1 class="text-3xl font-bold text-white mb-2">Django Chat</h1>
+    <p class="text-white/40 text-sm">Sign in to get started.</p>
+  </div>
   {% endif %}
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  function sentFriendRequest(element){
+    const userId = element.dataset.id;
+    const li = element.closest('li');
+    const username = li.querySelector('span').textContent
+    fetch("{% url 'add_friend' %}", {
+      method: 'POST',
+      headers: {
+         "X-CSRFToken": "{{ csrf_token }}",
+         "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `user_id=${userId}`,
+    })
+     .then(res => res.json())
+     .then(data => {
+       console.log(data)
+       if (data.status){
+         li.remove()
+         
+         const pendingListLen = document.getElementById('pending-length')
+         const availableListLen = document.getElementById('available-length')
+         
+         pendingListLen.textContent = parseInt(pendingListLen.textContent) + 1;
+         availableListLen.textContent = parseInt(availableListLen.textContent) - 1;
+         
+         const emptyPendingList = document.querySelector('#pending-list p');
+         if (emptyPendingList) emptyPendingList.remove()
+         
+         const availableList = document.getElementById('available-list');
+         if (availableList.querySelectorAll('li').length === 0) availableList.innerHTML = '<p class="text-white/30 text-sm">No users to add.</p>'
+         
+         const newlist = document.createElement('li');
+         newlist.className = 'flex items-center justify-between py-2 border-b border-white/10'
+         newlist.innerHTML = `
+          <span class="text-white font-medium">${username}</span>
+          <span class="text-xs text-white/40">sent</span>
+         `
+         document.getElementById('pending-list').appendChild(newlist)
+       }
+     })
+  }
+</script>
 {% endblock %}

@@ -10,13 +10,18 @@
     <!-- Chat Header -->
     <header class="flex h-16 items-center justify-between border-b border-slate-200 bg-teal-900 px-6 z-10 shadow-sm">
       <div class="flex items-center gap-3">
-        <div class="relative h-10 w-10">
+        <!--<div class="relative h-10 w-10">
+        
           <img class="h-full w-full rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=256&auto=format&fit=crop" alt="Sarah" />
-          <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500 dark:border-slate-950"></span>
+          
         </div>
+        -->
         <div>
           <h2 class="text-sm font-semibold leading-tight">{{ other_user.username }}</h2>
+          <div class="flex items-center gap-1">
+          <span class="h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500 dark:border-slate-950"></span>
           <p class="text-xs text-green-500 font-medium">Active now</p>
+          </div>
         </div>
       </div>
     </header>

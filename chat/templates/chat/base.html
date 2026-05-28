@@ -9,12 +9,10 @@
 <body>
   <div class="p-4 bg-teal-600 w-full h-auto flex justify-between items-center">
     <a href="{% url 'index' %}">
-      
     <h1 class="text-2xl text-white">Django Chat</h1>
     </a>
     <div class="flex gap-4">
     {% if request.user.is_authenticated %}
-    <a class="text-white">Rooms</a>
     <a href="{% url 'logout' %}" class="text-white">Logout</a>
     {% else %}
     <a href="{% url 'signin' %}" class="text-white">Login</a>
