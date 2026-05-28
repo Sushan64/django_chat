@@ -15,7 +15,7 @@ def index(request):
     active_friends = models.Friendship.objects.filter(
       Q(sender=request.user) | Q(receiver=request.user),
       relation="active"
-      ).select_related('sender', 'receiver')
+      ).exclude(Q(sender__username="AI_Assistant") | Q(receiver__username="AI_Assistant")).select_related('sender', 'receiver')
       
     pending_friends = models.Friendship.objects.filter(
       Q(sender=request.user) | Q(receiver=request.user),
@@ -56,6 +56,16 @@ def add_friend(request):
     if created:
       return JsonResponse({'status': True, 'message': 'Friend request has been sent!'})
     return JsonResponse({'status': False, 'message': 'Something went wrong!'})
+    
+    
+def accept_request(request):
+  if request.method == "POST":
+    user_id = request.POST.get('user_id')
+    user = get_object_or_404(models.Friendship, sender__id=user_id, receiver__id=request.user.id)
+    user.relation = "active"
+    user.save(update_fields=['relation'])
+    return JsonResponse({'status': True, 'message': 'You are now friends'})
+  return JsonResponse({'status': False, 'message': 'Something went wrong'})
   
 def signup(request):
   if request.method == "POST":

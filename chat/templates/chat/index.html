@@ -11,23 +11,22 @@
 
   <!-- Friends -->
   <div class="mb-8">
-    <h2 class="text-xs uppercase tracking-widest text-white/50 mb-3">Friends ({{ friends|length }})</h2>
-    {% if friends %}
-      <ul class="flex flex-col gap-1">
+    <h2 class="text-xs uppercase tracking-widest text-white/50 mb-3">Friends (<span id="friends-length">{{ friends|length }}</span>)</h2>
+      <ul id="friends-list" class="flex flex-col gap-1">
         {% for friend in friends %}
-          {% if friend.username != "AI_Assistant" %}
+        {% if friend.username != "AI_Assistant" %}
           <li class="flex items-center justify-between py-2 border-b border-white/10">
             <span class="text-white font-medium">{{ friend.username }}</span>
             <a href="{% url 'room' friend.id %}" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
               Message
             </a>
           </li>
-          {% endif %}
+        {% endif %}
         {% endfor %}
+        {% if not friends %}
+        <p class="text-white/30 text-sm">No friends yet.</p>
+       {% endif %}
       </ul>
-    {% else %}
-      <p class="text-white/30 text-sm">No friends yet.</p>
-    {% endif %}
   </div>
 
   <!-- Pending -->
@@ -43,7 +42,11 @@
               <span class="text-xs text-white/40">sent</span>
             {% else %}
               <span class="text-white font-medium">{{ p_friend.sender }}</span>
-              <span class="text-xs text-white/40">incoming</span>
+              <span class="text-xs text-white/40">
+                  <a onclick="acceptFriendRequest(this)" data-id="{{ p_friend.sender.id }}" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
+                  Accept
+                  </a>
+              </span>
             {% endif %}
           </li>
           {% endif %}
@@ -132,6 +135,52 @@
          document.getElementById('pending-list').appendChild(newlist)
        }
      })
+  }
+  
+  function acceptFriendRequest(element){
+    const userId = element.dataset.id;
+    const li = element.closest('li');
+    const username = li.querySelector('span').textContent
+    
+    fetch("{% url 'accept_request' %}", {
+      method: "POST",
+      headers:{
+        "X-CSRFToken": "{{ csrf_token }}",
+         "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `user_id=${userId}`
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status){
+        li.remove()
+       const pendingListLen = document.getElementById('pending-length')
+       const friendsListLen = document.getElementById('friends-length')
+       
+      pendingListLen.textContent = parseInt(pendingListLen.textContent) - 1;
+      friendsListLen.textContent = parseInt(friendsListLen.textContent) + 1;
+      
+      const friendsListEl = document.getElementById('friends-list')
+      
+      const noFriendsMsg = document.querySelector("#friends-list p")
+      if (noFriendsMsg) noFriendsMsg.remove()
+      
+      const pendingFriendsList = document.getElementById("pending-list")
+      if (pendingFriendsList.querySelectorAll('li').length === 0) pendingFriendsList.innerHTML = '<p class="text-white/30 text-sm">No pending requests.</p>'
+      
+      const newlist = document.createElement('li');
+      newlist.className = "flex items-center justify-between py-2 border-b border-white/10"
+      newlist.innerHTML = `
+      <span class="text-white font-medium">${username}</span>
+        <a href="${'https://'+window.location.host + `/room/${userId}` }" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
+          Message
+      </a>
+      `
+      friendsListEl.appendChild(newlist)
+      
+      
+      }
+    })
   }
 </script>
 {% endblock %}
