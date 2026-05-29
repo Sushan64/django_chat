@@ -66,6 +66,17 @@ def accept_request(request):
     user.save(update_fields=['relation'])
     return JsonResponse({'status': True, 'message': 'You are now friends'})
   return JsonResponse({'status': False, 'message': 'Something went wrong'})
+ 
+
+def reject_request(request):
+  if request.method == "POST":
+    user_id = request.POST.get('user_id')
+    user = get_object_or_404(models.Friendship, sender__id=user_id, receiver__id=request.user.id)
+    user.delete()
+    return JsonResponse({'status': True, 'message': 'Request rejected'})
+  return JsonResponse({'status': False, 'message': 'Something went wrong'})
+ 
+
   
 def signup(request):
   if request.method == "POST":

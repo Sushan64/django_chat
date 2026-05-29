@@ -136,6 +136,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     import os
     from google import genai
     from dotenv import load_dotenv
+    from google.genai import types
     
     load_dotenv()
     
@@ -145,7 +146,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
     history = await self.get_ai_history()
     
     try:
-      chat = client.chats.create(model="gemini-2.5-flash", history=history)
+      chat = client.chats.create(
+        model="gemini-2.5-flash",
+        history=history,
+        config=types.GenerateContentConfig(
+          system_instruction="You are a friendly person. You always use Genz words (normal and eazy one). Your name is Django chat. You are created by Django specialist and expert named sushan khatiwada. "
+          ),
+        )
       response =  chat.send_message(user_message)
       ai_reply = response.text
       

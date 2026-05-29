@@ -42,11 +42,18 @@
               <span class="text-xs text-white/40">sent</span>
             {% else %}
               <span class="text-white font-medium">{{ p_friend.sender }}</span>
+              <div class="flex items-center gap-3">
               <span class="text-xs text-white/40">
                   <a onclick="acceptFriendRequest(this)" data-id="{{ p_friend.sender.id }}" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
                   Accept
                   </a>
               </span>
+              <span class="text-xs text-white/40">
+                  <a onclick="rejectFriendRequest(this)" data-id="{{ p_friend.sender.id }}" class="text-xs border border-red-600/20 text-red-600/60 hover:text-red-400 hover:border-red-400/50 px-3 py-1 rounded transition-colors">
+                  Reject
+                  </a>
+              </span>
+              </div>
             {% endif %}
           </li>
           {% endif %}
@@ -172,7 +179,7 @@
       newlist.className = "flex items-center justify-between py-2 border-b border-white/10"
       newlist.innerHTML = `
       <span class="text-white font-medium">${username}</span>
-        <a href="${'https://'+window.location.host + `/room/${userId}` }" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
+        <a href="${'http://'+window.location.host + `/room/${userId}` }" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
           Message
       </a>
       `
@@ -182,5 +189,51 @@
       }
     })
   }
+  
+  function rejectFriendRequest(element){
+    const userId = element.dataset.id;
+    const li = element.closest('li');
+    const username = li.querySelector('span').textContent
+    console.log("reject userId:", userId)
+    fetch("{% url 'reject_request' %}", {
+      method: "POST",
+      headers:{
+        "X-CSRFToken": "{{ csrf_token }}",
+         "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `user_id=${userId}`
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status){
+        li.remove()
+       const pendingListLen = document.getElementById('pending-length')
+       const availableListLen = document.getElementById('available-length')
+       
+      availableListLen.textContent = parseInt(availableListLen.textContent) + 1;
+      pendingListLen.textContent = parseInt(pendingListLen.textContent) - 1;
+      
+      const availableListEl = document.getElementById('available-list')
+      
+      const noAvailableUserMsg = document.querySelector("#available-list p")
+      if (noAvailableUserMsg) noAvailableUserMsg.remove()
+      
+      const pendingFriendsList = document.getElementById("pending-list")
+      if (pendingFriendsList.querySelectorAll('li').length === 0) pendingFriendsList.innerHTML = '<p class="text-white/30 text-sm">No pending requests.</p>'
+      
+      const newlist = document.createElement('li');
+      newlist.className = "flex items-center justify-between py-2 border-b border-white/10"
+      newlist.innerHTML = `
+      <span class="text-white font-medium">${username}</span>
+        <a onclick="sentFriendRequest(this)" data-id="${userId}" class="text-xs border border-white/20 text-white/60 hover:text-white hover:border-white/50 px-3 py-1 rounded transition-colors">
+      <span class="text-xs text-white/40">add</span>
+      </a>
+      `
+      availableListEl.appendChild(newlist)
+      
+  }
+    })
+  }
+  
 </script>
 {% endblock %}
