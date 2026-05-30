@@ -83,7 +83,7 @@
 <script>
   const otherUserId = JSON.parse(document.getElementById('other-user-id').textContent);
   const senderId = JSON.parse(document.getElementById('sender-id').textContent);
-  const chatSocket = new WebSocket('ws://'+ window.location.host + '/ws/chat/' + otherUserId + '/');
+  const chatSocket = new WebSocket('wss://'+ window.location.host + '/ws/chat/' + otherUserId + '/');
   const inputField = document.getElementById('chat-input');
   const chatSubmit = document.getElementById('chat-submit');
   const msgArea = document.getElementById('msg-area')
